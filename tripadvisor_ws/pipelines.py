@@ -10,7 +10,7 @@ from scrapy.exporters import JsonItemExporter
 class TopicItemPipeline(object):
 
     def __init__(self):
-        self.file = open("topics.json", 'wb')
+        self.file = open("data.json", 'wb')
         self.exporter = JsonItemExporter(self.file, encoding='utf-8', indent=4)
         self.exporter.start_exporting()
  

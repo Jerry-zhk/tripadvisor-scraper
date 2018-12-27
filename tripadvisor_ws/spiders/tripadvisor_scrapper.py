@@ -10,7 +10,7 @@ class TripAdvisorHKForum(scrapy.Spider):
     def start_requests(self):
         step = 20
         urls = []
-        for i in range(1):
+        for i in range(11):
             urls.append('{}/ShowForum-g294217-i1496-o{}-Hong_Kong.html'.format(self.domain, i * step))
 
         for url in urls:
@@ -27,10 +27,12 @@ class TripAdvisorHKForum(scrapy.Spider):
     def parse_topic(self, response):
         topic_node = response.css('div#SHOW_TOPIC').xpath('div[@class="balance"]')
         post = topic_node.css('div.firstPostBox')
+        _id = post.xpath('div/a/@id').extract_first()
+        
         title = post.css('div.postTitle').xpath('span/text()').extract_first()
         body = post.css('div.postBody').xpath('p/text() | p/a/text()').extract()
         created_at = post.css('div.postDate').xpath('text()').extract_first()
-        topic = Topic(title=title, body="".join(body), created_at=created_at)
+        topic = Topic(_id=_id, title=title, body="".join(body), created_at=created_at)
 
         # parse post creator
         profile_node = post.css('div.profile')
@@ -54,9 +56,12 @@ class TripAdvisorHKForum(scrapy.Spider):
     def extractAuthor(self, profile):
         username = profile.css('div.username').xpath('a/span/text()').extract_first()
         level = profile.css('div.levelBadge').xpath('@class').extract_first().split('_')[1]
-        no_of_posts = profile.css('div.postBadge').xpath('span/text()').extract_first().split(' ')[0]
-        no_of_reviews = profile.css('div.reviewerBadge').xpath('span/text()').extract_first().split(' ')[0]
-        author = Author(username=username, level=int(level), no_of_posts=int(no_of_posts.replace(',', '')), no_of_reviews=int(no_of_reviews.replace(',', '')))
+        posts_string = profile.css('div.postBadge').xpath('span/text()').extract_first()
+        no_of_posts = 0 if (posts_string is None) else int(posts_string.split(' ')[0].replace(',', ''))
+        reviews_string = profile.css('div.reviewerBadge').xpath('span/text()').extract_first()
+        no_of_reviews = 0 if (reviews_string is None) else int(reviews_string.split(' ')[0].replace(',', ''))
+
+        author = Author(username=username, level=int(level), no_of_posts=no_of_posts, no_of_reviews=no_of_reviews)
         return author
 
     def extractReply(self, replies):
