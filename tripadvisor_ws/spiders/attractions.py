@@ -11,30 +11,47 @@ class AttractionsSpider(scrapy.Spider):
     def start_requests(self):
         step = 30
         urls = []
-        for i in range(6):
+        # First page
+        yield scrapy.Request(url='{}/Attractions-g294217-Activities-Hong_Kong.html'.format(self.domain), callback=self.parse_first_page)
+        for i in range(1, 11):
             urls.append('{}/Attractions-g294217-Activities-oa{}-Hong_Kong.html'.format(self.domain, i * step))
 
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse)
+            # break
+
+    def parse_first_page(self, response):
+        a_list = response.css('div#FILTERED_LIST')
+
+        for href in a_list.xpath("//a[contains(@class, 'attractions-attraction-overview-main-TopPOIs__name--')]/@href").extract():
+            yield scrapy.Request('{}{}'.format(self.domain, href), callback=self.parse_attraction)
+            # break
 
     def parse(self, response):
-        list = response.css('div#FILTERED_LIST')
-        for el in list.css('div.attraction_element'):
+        a_list = response.css('div#FILTERED_LIST')
+        for el in a_list.css('div.attraction_element_tall'):
             href = el.css('div.listing_title').xpath('a/@href').extract_first()
             yield scrapy.Request('{}{}'.format(self.domain, href), callback=self.parse_attraction)
+            
 
     def parse_attraction(self, response):
         attraction = Attraction()
         header = response.css('div#taplc_resp_attraction_header_ar_responsive_0').xpath('div')
         attraction['name'] = header.css('h1#HEADING').xpath('text()').extract_first()
-        attraction['rank'] = header.css('span.header_popularity').xpath('b/span/text()').extract_first()
         attraction['categories'] = header.css('span.attractionCategories').xpath('div/a/text()').extract()
+        
+        try:
+            attraction['ranking'] = int(header.css('span.header_popularity').xpath('b/span/text()').extract_first().replace('#', ''))
+            attraction['rating'] = float(response.css('span.overallRating').xpath('text()').extract_first())
+        except:
+            pass
 
-        # images = []
-        # image_wrapper = response.css('div.mosaic_photos')
-        # images.append(image_wrapper.css('div.large_photo_wrapper').xpath('div[1]/div/img/@src').extract_first())
-        # small_images = image_wrapper.css('div.mini_photos_container').css('div.mini_photo_wrap').xpath('div/div/img/@src').extract()
-        # attraction['images'] = images + small_images
+        photos = response.css('div.mosaic_photos').css('div.prw_common_basic_image').css('img.basicImg').xpath('@src').extract()
+        if len(photos) > 5:
+            attraction['images'] = photos[:5]
+        else:
+            attraction['images'] = photos
+        
 
         details = response.css('div#taplc_location_detail_about_card_0').xpath('div/div')
         suggested_duration= details.css('div.attractions-attraction-detail-about-card-AboutSection__sectionWrapper--3vxlo').xpath('text()').extract_first()

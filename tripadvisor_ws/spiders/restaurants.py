@@ -12,7 +12,7 @@ class RestaurantsSpider(scrapy.Spider):
     def start_requests(self):
         step = 30
         urls = []
-        for i in range(6):
+        for i in range(11):
             urls.append('{}/Restaurants-g294217-oa{}-Hong_Kong.html'.format(self.domain, i * step))
 
         for url in urls:

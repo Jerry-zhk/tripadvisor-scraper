@@ -36,7 +36,7 @@ class Attraction(Item):
     location = Field()
     district = Field()
     categories = Field()
-    rank = Field()
+    ranking = Field()
     about = Field()
     suggested_duration = Field()
     rating = Field()
